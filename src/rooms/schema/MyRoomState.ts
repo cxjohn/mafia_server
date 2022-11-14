@@ -1,15 +1,5 @@
 import { Schema, type, MapSchema } from "@colyseus/schema";
 
-export enum Phase {
-  LOBBY,
-  INTRODUCTION,
-  NIGHT,
-  NARRATIONMORNING,
-  VOTING,
-  NARRATIONLYNCHING,
-  CONCLUSION,
-}
-
 export class Player extends Schema {
   @type("string") name: string;
   @type("boolean") alive = true;
@@ -17,15 +7,22 @@ export class Player extends Schema {
 }
 
 export class State extends Schema {
-  @type("boolean") entered = false;
-  @type("number") phase = 0;
-
-  setEntered() {
-    this.entered = true;
-  }
+  @type("string") phase = "LOBBY";
+  @type("number") phaseIndex = 0;
+  @type(["string"]) phaseArr = [
+    "LOBBY",
+    "INTRODUCTION",
+    "NIGHT",
+    "NARRATIONMORNING",
+    "VOTING",
+    "NARRATIONLYNCHING",
+    "CONCLUSION",
+  ];
 
   nextPhase() {
-    this.phase = this.phase + 1;
+    this.phaseIndex = this.phaseArr.indexOf(this.phase);
+    if (this.phaseIndex >= 0 && this.phaseIndex < this.phaseArr.length - 1)
+      this.phase = this.phaseArr[this.phaseIndex + 1];
   }
 
   @type({ map: Player })

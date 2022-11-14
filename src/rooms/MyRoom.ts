@@ -31,8 +31,6 @@ export class MafiaRoom extends Room<State> {
         confirmed = [];
       }
     });
-
-    this.state.setEntered();
   }
 
   onJoin(client: Client, options) {
