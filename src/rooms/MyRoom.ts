@@ -2,52 +2,53 @@ import { Room, Client } from "colyseus";
 import { State } from "./schema/MyRoomState";
 
 export class MafiaRoom extends Room<State> {
-  maxClients = 4;
+  maxClients = 12;
 
   onCreate(options) {
     console.log("MafiaRoom created!", options);
 
+    //Messages
     this.onMessage("message", (client, message) => {
-      console.log(
-        "ChatRoom received message from",
-        client.sessionId,
-        ":",
-        message
+      this.broadcast(
+        "messages",
+        `(${this.state.players[client.sessionId]?.name}) ${message}`
       );
-      this.broadcast("messages", `(${client.sessionId}) ${message}`);
     });
 
     this.setState(new State());
 
-    this.onMessage("move", (client, data) => {
-      console.log(
-        "MafiaRoom received message from",
-        client.sessionId,
-        ":",
-        data
-      );
-      this.state.movePlayer(client.sessionId, data);
-      this.broadcast(
-        "messages",
-        `(${client.sessionId}) ${JSON.stringify(data)}`
-      );
+    //Enter new phase
+    let confirmed = [];
+    this.onMessage("nextPhase", (client) => {
+      if (!confirmed.includes(client.sessionId)) {
+        confirmed.push(client.sessionId);
+      }
+      if (
+        this.state.players.size === confirmed.length &&
+        confirmed.length > 1
+      ) {
+        this.state.nextPhase();
+        confirmed = [];
+      }
     });
 
     this.state.setEntered();
   }
 
-  onAuth(client, options, req) {
-    return true;
-  }
-
   onJoin(client: Client, options) {
     this.state.createPlayer(client.sessionId, options);
-    this.broadcast("messages", `${client.sessionId} joined.`);
+    this.broadcast(
+      "messages",
+      `${this.state.players[client.sessionId]?.name} joined.`
+    );
   }
 
   onLeave(client: Client) {
     this.state.removePlayer(client.sessionId);
-    this.broadcast("messages", `${client.sessionId} left.`);
+    this.broadcast(
+      "messages",
+      `${this.state.players[client.sessionId]?.name} left.`
+    );
   }
 
   onDispose() {
