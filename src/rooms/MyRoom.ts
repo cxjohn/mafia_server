@@ -1,9 +1,9 @@
-import { Room, Client } from "colyseus";
+import { Room, Client, Delayed } from "colyseus";
 import { State } from "./schema/MyRoomState";
 
 export class MafiaRoom extends Room<State> {
   maxClients = 12;
-
+  public countdownInterval!: Delayed;
   onCreate(options) {
     console.log("MafiaRoom created!", options);
 
@@ -25,12 +25,24 @@ export class MafiaRoom extends Room<State> {
       }
       if (
         this.state.players.size === confirmed.length &&
-        confirmed.length > 1
+        confirmed.length > 0
       ) {
         this.state.nextPhase();
         confirmed = [];
       }
     });
+
+    if (this.state.phase === "NARRATIONMORNING") {
+      this.state.countdown = 240;
+
+      this.countdownInterval = this.clock.setInterval(() => {
+        this.state.countdown--;
+        if (this.state.countdown === 0) {
+          this.countdownInterval.clear();
+          this.state.nextPhase();
+        }
+      }, 1000);
+    }
   }
 
   onJoin(client: Client, options) {

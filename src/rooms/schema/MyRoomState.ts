@@ -7,6 +7,7 @@ export class Player extends Schema {
 }
 
 export class State extends Schema {
+  @type("number") countdown: number;
   @type("string") phase = "LOBBY";
   @type("number") phaseIndex = 0;
   @type(["string"]) phaseArr = [
