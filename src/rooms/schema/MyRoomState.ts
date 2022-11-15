@@ -1,4 +1,5 @@
 import { Schema, type, MapSchema } from "@colyseus/schema";
+import { PhaseType } from "../MyRoom";
 
 export class Player extends Schema {
   @type("string") name: string;
@@ -8,22 +9,17 @@ export class Player extends Schema {
 
 export class State extends Schema {
   @type("number") countdown: number;
-  @type("string") phase = "LOBBY";
-  @type("number") phaseIndex = 0;
-  @type(["string"]) phaseArr = [
-    "LOBBY",
-    "INTRODUCTION",
-    "NIGHT",
-    "NARRATIONMORNING",
-    "VOTING",
-    "NARRATIONLYNCHING",
-    "CONCLUSION",
-  ];
+  @type("number") phase = PhaseType.LOBBY;
+  @type("string") narration = "Welcome to Mafia";
 
   nextPhase() {
-    this.phaseIndex = this.phaseArr.indexOf(this.phase);
-    if (this.phaseIndex >= 0 && this.phaseIndex < this.phaseArr.length - 1)
-      this.phase = this.phaseArr[this.phaseIndex + 1];
+    if (this.phase >= PhaseType.LOBBY && this.phase < PhaseType.CONCLUSION - 1) {
+      this.phase = this.phase + 1;
+    }
+  }
+
+  setNarration(narration: string) {
+    this.narration = narration;
   }
 
   @type({ map: Player })

@@ -37,6 +37,7 @@
     "colyseus": "^0.14.20",
     "cors": "^2.8.5",
     "express": "^4.16.4",
-    "serve-index": "^1.9.1"
+    "serve-index": "^1.9.1",
+    "seed-random": "^2.2.0"
   }
 }
