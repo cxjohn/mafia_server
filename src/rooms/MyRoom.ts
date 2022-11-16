@@ -1,12 +1,11 @@
 import { Room, Client, Delayed } from "colyseus";
 import { State } from "./schema/MyRoomState";
-import { Narrator } from "../Narrator"
-
+import { Narrator } from "../Narrator";
 
 /*
  * By default Typescript enums map members onto whole numbers starting at 0.
  * Therefore, we can store a number for phase, but utilize the enum names
- * for convenience. 
+ * for convenience.
  * e.g. Phase: number = PhaseType.LOBBY; is the same as Phase: number = 0;
  */
 export enum PhaseType {
@@ -25,6 +24,7 @@ export class MafiaRoom extends Room<State> {
   narrator: Narrator;
   onCreate(options) {
     console.log("MafiaRoom created!", options);
+    this.setState(new State());
 
     //Messages
     this.onMessage("message", (client, message) => {
@@ -34,7 +34,6 @@ export class MafiaRoom extends Room<State> {
       );
     });
 
-    this.setState(new State());
     this.narrator = new Narrator();
 
     //Enter new phase
@@ -44,15 +43,20 @@ export class MafiaRoom extends Room<State> {
         confirmed.push(client.sessionId);
       }
       if (
-        this.state.players.size === confirmed.length &&
-        confirmed.length > 0
+        true
+        //TODO: add logic for hosting starting game
+
+        // this.state.players.size === confirmed.length &&
+        // confirmed.length >= this.state.minClients
       ) {
         this.state.nextPhase();
         confirmed = [];
-console.log(this.state.phase);
+        console.log(this.state.phase);
         switch (this.state.phase) {
           case PhaseType.LOBBY:
-            this.state.setNarration("Welcome to Mafia. Please wait for the rest of the players to join.");
+            this.state.setNarration(
+              "Welcome to Mafia. Please wait for the rest of the players to join."
+            );
             break;
           case PhaseType.INTRODUCTION:
             this.state.setNarration(this.narrator.getTheme());
@@ -70,29 +74,35 @@ console.log(this.state.phase);
             this.state.setNarration("Another person has died!");
             break;
           case PhaseType.CONCLUSION:
-            this.state.setNarration("A sufficient number of players have died. Congratulations.");
+            this.state.setNarration(
+              "A sufficient number of players have died. Congratulations."
+            );
             break;
           default:
             this.state.setNarration("Improper phase type");
         }
       }
+      if (this.state.phase === PhaseType.NARRATIONMORNING) {
+        this.state.countdown = 240;
+
+        this.countdownInterval = this.clock.setInterval(() => {
+          this.state.countdown--;
+          this.state.phase !== PhaseType.NARRATIONMORNING &&
+            this.countdownInterval.clear();
+          if (this.state.countdown === 0) {
+            this.countdownInterval.clear();
+            this.state.nextPhase();
+          }
+        }, 1000);
+      }
     });
-
-    if (this.state.phase === PhaseType.NARRATIONMORNING) {
-      this.state.countdown = 240;
-
-      this.countdownInterval = this.clock.setInterval(() => {
-        this.state.countdown--;
-        if (this.state.countdown === 0) {
-          this.countdownInterval.clear();
-          this.state.nextPhase();
-        }
-      }, 1000);
-    }
   }
 
   onJoin(client: Client, options) {
     this.state.createPlayer(client.sessionId, options);
+    if (this.state.players.size === 1) {
+      this.state.players[client.sessionId].room_owner = true;
+    }
     this.broadcast(
       "messages",
       `${this.state.players[client.sessionId]?.name} joined.`

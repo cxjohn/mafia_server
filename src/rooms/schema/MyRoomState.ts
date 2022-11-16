@@ -5,15 +5,17 @@ export class Player extends Schema {
   @type("string") name: string;
   @type("boolean") alive = true;
   @type("boolean") room_owner = false;
+  @type("boolean") confirmed = false;
 }
 
 export class State extends Schema {
+  @type("number") minClients = 1;
   @type("number") countdown: number;
   @type("number") phase = PhaseType.LOBBY;
   @type("string") narration = "Welcome to Mafia";
 
   nextPhase() {
-    if (this.phase >= PhaseType.LOBBY && this.phase < PhaseType.CONCLUSION - 1) {
+    if (this.phase >= PhaseType.LOBBY && this.phase < PhaseType.CONCLUSION) {
       this.phase = this.phase + 1;
     }
   }
