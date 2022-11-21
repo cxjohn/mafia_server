@@ -37,20 +37,28 @@ export class MafiaRoom extends Room<State> {
     this.narrator = new Narrator();
 
     //Enter new phase
-    let confirmed = [];
+    let confirmed = false;
     this.onMessage("nextPhase", (client) => {
-      if (!confirmed.includes(client.sessionId)) {
-        confirmed.push(client.sessionId);
-      }
-      if (
-        true
-        //TODO: add logic for hosting starting game
+      this.state.players[client.sessionId].confirmed = true;
 
-        // this.state.players.size === confirmed.length &&
-        // confirmed.length >= this.state.minClients
-      ) {
+      for (let player of this.state.players.values()) {
+        if (player.confirmed === false) {
+          confirmed = false;
+          break;
+        } else {
+          confirmed = true;
+        }
+      }
+      //TODO: add logic for lobby phase
+      if (confirmed && this.state.players.size >= this.state.minClients) {
+        confirmed = false;
+
+        this.state.players.forEach((player) => {
+          player.confirmed = false;
+        });
+
         this.state.nextPhase();
-        confirmed = [];
+
         console.log(this.state.phase);
         switch (this.state.phase) {
           case PhaseType.LOBBY:

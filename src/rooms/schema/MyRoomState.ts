@@ -9,7 +9,7 @@ export class Player extends Schema {
 }
 
 export class State extends Schema {
-  @type("number") minClients = 1;
+  @type("number") minClients = 2;
   @type("number") countdown: number;
   @type("number") phase = PhaseType.LOBBY;
   @type("string") narration = "Welcome to Mafia";
