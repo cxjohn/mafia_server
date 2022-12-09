@@ -24,8 +24,29 @@ export class MafiaRoom extends Room<State> {
     });
 
     //Enter new phase
-    let confirmed = false;
+    let confirmed = [];
     this.onMessage("nextPhase", (client) => {
+      this.state.players[client.sessionId].confirmed = true;
+
+      // for (let player of this.state.players.values()) {
+      //   if (player.confirmed === false) {
+      //     confirmed = false;
+      //     break;
+      //   } else {
+      //     confirmed = true;
+      //   }
+      // }
+
+      //TODO: add logic for lobby phase
+      // if (confirmed && this.state.players.size >= this.state.minClients) {
+      //   confirmed = false;
+
+      //   this.state.players.forEach((player) => {
+      //     player.confirmed = false;
+      //   });
+
+      //   this.state.nextPhase();
+
       if (!confirmed.includes(client.sessionId)) {
         confirmed.push(client.sessionId);
         this.state.players[client.sessionId].confirmed = true;
@@ -43,10 +64,11 @@ export class MafiaRoom extends Room<State> {
           this.state.assignRoles();
         }
       }
-
-      if (this.phase.type === PhaseType.NARRATIONMORNING) {
+      if (
+        this.phase.type === PhaseType.NARRATIONMORNING &&
+        confirmed.length === 0
+      ) {
         this.state.countdown = 240;
-
         this.countdownInterval = this.clock.setInterval(() => {
           this.state.countdown--;
           this.state.phase !== PhaseType.NARRATIONMORNING &&
