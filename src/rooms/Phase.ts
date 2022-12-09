@@ -77,15 +77,26 @@ export function roomOwnerConfirms(players: MapSchema<Player>): boolean {
   return confirmed;
 }
 
-// Checks every Player, if all Players confirm, then returns true.
+// Checks every Player, if all living Players confirm, then returns true.
 export function allConfirmed(players: MapSchema<Player>): boolean {
   let confirmed = true;
 
   players.forEach((player, id) => {
-    confirmed &&= player.confirmed;
+    confirmed &&= player.confirmed || !player.alive;
   });
 
   return confirmed;
+}
+
+// Checks every Player, if all living Players confirm, then returns true.
+export function allVoted(players: MapSchema<Player>): boolean {
+  let voted = true;
+
+  players.forEach((player, id) => {
+    voted &&= player.voted || !player.alive;
+  });
+
+  return voted;
 }
 
 function anyTownspersonAlive(players: MapSchema<Player>): boolean {
