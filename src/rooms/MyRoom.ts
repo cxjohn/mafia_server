@@ -1,7 +1,7 @@
 import { Room, Client, Delayed } from "colyseus";
-import { State } from "./schema/MyRoomState";
+import { Player, State, Role } from "./schema/MyRoomState";
 import { Narrator } from "../Narrator";
-import { PhaseType, Phase, goToLobby } from "./Phase";
+import { PhaseType, Phase, goToLobby, allVoted } from "./Phase";
 import { type } from "@colyseus/schema";
 
 export class MafiaRoom extends Room<State> {
@@ -9,11 +9,14 @@ export class MafiaRoom extends Room<State> {
   public countdownInterval!: Delayed;
   narrator: Narrator;
   phase: Phase;
+  playerVotes: Map<Player, number>;
+
   onCreate(options) {
     console.log("MafiaRoom created!", options);
     this.setState(new State());
     this.narrator = new Narrator();
     this.phase = goToLobby(this.state.players);
+    this.playerVotes = new Map<Player, number>();
 
     //Messages
     this.onMessage("message", (client, message) => {
@@ -23,29 +26,85 @@ export class MafiaRoom extends Room<State> {
       );
     });
 
+    this.onMessage ("voteForLynch", (client, target) => {
+      if (this.phase.type != PhaseType.VOTING) {
+        console.log("Client error, voteForLynch can only be called during VOTING phase");
+        return;
+      }
+
+      if (!this.playerVotes.has(this.state.players[target])) {
+        this.playerVotes.set(this.state.players[target], 1);
+      } else {
+        this.playerVotes.set(this.state.players[target],  this.playerVotes.get(this.state.players[target]) + 1);
+      }
+
+      this.state.players[client.sessionId].voted = true;
+
+      if (allVoted(this.state.players)) {
+        console.log("everyone has voted");
+
+        let highestVotes = 0;
+        let votedPlayer = new Player();
+        let tie = false;
+        let tiedPlayer = new Player();
+        this.playerVotes.forEach((votes, player) => {
+          if (votes == highestVotes) {
+            tie = true;
+            tiedPlayer = player;
+          }
+          if (votes > highestVotes) {
+            highestVotes = votes;
+            votedPlayer = player;
+            tie = false;
+          }
+        });
+
+        if (tie) {
+          console.log("It was a tie! But " + votedPlayer.name + " is still going to die.");
+        }
+
+        console.log(votedPlayer.name + " has been lynched.");
+        
+        this.state.players.forEach((player, id) => {
+          player.voted = false;
+          if (player == votedPlayer) {
+            player.alive = false;
+          }
+        });
+
+        this.playerVotes.clear();
+      }
+    });
+
+    this.onMessage("voteForWhack", (client, target) => {
+      if (this.phase.type != PhaseType.NIGHT) {
+        console.log("Client error, voteForWhack can only be called during NIGHT phase");
+        return;
+      }
+
+      if (this.state.players[client.sessionId]?.role != Role.MAFIA) {
+        console.log("Client error, voteForWhack can only be called from a client who has the MAFIA role");
+        return;
+      }
+
+      if (this.state.players[target]?.role == Role.MAFIA) {
+        console.log("Client error, voteForWhack can not target a user who has the MAFIA role");
+        return;
+      }
+
+      console.log(this.state.players[target]?.name + " has been whacked by the mafia");
+      this.state.players[target].alive = false;
+    });
+
     //Enter new phase
     let confirmed = [];
     this.onMessage("nextPhase", (client) => {
-      this.state.players[client.sessionId].confirmed = true;
-
-      // for (let player of this.state.players.values()) {
-      //   if (player.confirmed === false) {
-      //     confirmed = false;
-      //     break;
-      //   } else {
-      //     confirmed = true;
-      //   }
-      // }
-
-      //TODO: add logic for lobby phase
-      // if (confirmed && this.state.players.size >= this.state.minClients) {
-      //   confirmed = false;
-
-      //   this.state.players.forEach((player) => {
-      //     player.confirmed = false;
-      //   });
-
-      //   this.state.nextPhase();
+      if (!this.state.players.has(client.sessionId)) {
+        console.log("Client error, requesting nextPhase from client who does not exist");
+      }
+      if (!this.state.players[client.sessionId].alive) {
+        return;
+      }
 
       if (!confirmed.includes(client.sessionId)) {
         confirmed.push(client.sessionId);
