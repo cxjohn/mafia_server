@@ -26,16 +26,21 @@ export class MafiaRoom extends Room<State> {
       );
     });
 
-    this.onMessage ("voteForLynch", (client, target) => {
+    this.onMessage("voteForLynch", (client, target) => {
       if (this.phase.type != PhaseType.VOTING) {
-        console.log("Client error, voteForLynch can only be called during VOTING phase");
+        console.log(
+          "Client error, voteForLynch can only be called during VOTING phase"
+        );
         return;
       }
 
       if (!this.playerVotes.has(this.state.players[target])) {
         this.playerVotes.set(this.state.players[target], 1);
       } else {
-        this.playerVotes.set(this.state.players[target],  this.playerVotes.get(this.state.players[target]) + 1);
+        this.playerVotes.set(
+          this.state.players[target],
+          this.playerVotes.get(this.state.players[target]) + 1
+        );
       }
 
       this.state.players[client.sessionId].voted = true;
@@ -60,11 +65,18 @@ export class MafiaRoom extends Room<State> {
         });
 
         if (tie) {
-          console.log("It was a tie! But " + votedPlayer.name + " is still going to die.");
+          console.log(
+            "It was a tie! But " + votedPlayer.name + " is still going to die."
+          );
         }
 
         console.log(votedPlayer.name + " has been lynched.");
-        
+
+        //TODO extract this into single function?
+        this.phase = this.phase.getNextPhase(this.state.players);
+        this.state.setNarration(this.phase.getNarration(this.narrator));
+        this.state.setPhase(this.phase.type);
+
         this.state.players.forEach((player, id) => {
           player.voted = false;
           if (player == votedPlayer) {
@@ -78,29 +90,44 @@ export class MafiaRoom extends Room<State> {
 
     this.onMessage("voteForWhack", (client, target) => {
       if (this.phase.type != PhaseType.NIGHT) {
-        console.log("Client error, voteForWhack can only be called during NIGHT phase");
+        console.log(
+          "Client error, voteForWhack can only be called during NIGHT phase"
+        );
         return;
       }
 
       if (this.state.players[client.sessionId]?.role != Role.MAFIA) {
-        console.log("Client error, voteForWhack can only be called from a client who has the MAFIA role");
+        console.log(
+          "Client error, voteForWhack can only be called from a client who has the MAFIA role"
+        );
         return;
       }
 
       if (this.state.players[target]?.role == Role.MAFIA) {
-        console.log("Client error, voteForWhack can not target a user who has the MAFIA role");
+        console.log(
+          "Client error, voteForWhack can not target a user who has the MAFIA role"
+        );
         return;
       }
 
-      console.log(this.state.players[target]?.name + " has been whacked by the mafia");
+      console.log(
+        this.state.players[target]?.name + " has been whacked by the mafia"
+      );
       this.state.players[target].alive = false;
+
+      //TODO extract this into single function?
+      this.phase = this.phase.getNextPhase(this.state.players);
+      this.state.setNarration(this.phase.getNarration(this.narrator));
+      this.state.setPhase(this.phase.type);
     });
 
     //Enter new phase
     let confirmed = [];
     this.onMessage("nextPhase", (client) => {
       if (!this.state.players.has(client.sessionId)) {
-        console.log("Client error, requesting nextPhase from client who does not exist");
+        console.log(
+          "Client error, requesting nextPhase from client who does not exist"
+        );
       }
       if (!this.state.players[client.sessionId].alive) {
         return;
@@ -114,6 +141,7 @@ export class MafiaRoom extends Room<State> {
       if (this.phase.canMoveToNextPhase(this.state.players)) {
         this.state.players.forEach((player, id) => (player.confirmed = false));
         confirmed = [];
+        //TODO extract this into single function?
         this.phase = this.phase.getNextPhase(this.state.players);
         this.state.setNarration(this.phase.getNarration(this.narrator));
         this.state.setPhase(this.phase.type);
@@ -152,12 +180,24 @@ export class MafiaRoom extends Room<State> {
     );
   }
 
-  onLeave(client: Client) {
-    this.state.removePlayer(client.sessionId);
-    this.broadcast(
-      "messages",
-      `${this.state.players[client.sessionId]?.name} left.`
-    );
+  async onLeave(client: Client) {
+    this.state.players.get(client.sessionId).connected = false;
+    console.log(client.sessionId, "left");
+
+    try {
+      // allow disconnected client to reconnect into this room until 180 seconds
+      await this.allowReconnection(client, 180);
+
+      // client returned! let's re-activate it.
+      this.state.players.get(client.sessionId).connected = true;
+    } catch (e) {
+      // 180 seconds expired. let's remove the client.
+      this.state.removePlayer(client.sessionId);
+      this.broadcast(
+        "messages",
+        `${this.state.players[client.sessionId]?.name} left.`
+      );
+    }
   }
 
   onDispose() {

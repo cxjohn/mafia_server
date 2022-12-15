@@ -13,6 +13,7 @@ export class Player extends Schema {
   @type("boolean") room_owner = false;
   @type("boolean") confirmed = false;
   @type("boolean") voted = false;
+  @type("boolean") connected = true;
 }
 
 export class State extends Schema {

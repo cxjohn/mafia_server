@@ -1,4 +1,3 @@
-
 import { MapSchema } from "@colyseus/schema";
 import { Player, Role } from "./schema/MyRoomState";
 import { Narrator } from "../Narrator";
@@ -25,42 +24,42 @@ export enum PhaseType {
 export type Phase = {
   type: PhaseType;
   // Returns true if the right number of people confirm to move to the next phase.
-  canMoveToNextPhase: (players: MapSchema<Player>)=>boolean;
+  canMoveToNextPhase: (players: MapSchema<Player>) => boolean;
   // Returns the narration string for this phase.
-  getNarration: (narrator: Narrator)=>string;
+  getNarration: (narrator: Narrator) => string;
   // Returns a new Phase object for the next phase.
   // Each phase has a goTo* function to handle phase-specific logic.
-  getNextPhase: (players: MapSchema<Player>)=>Phase;
+  getNextPhase: (players: MapSchema<Player>) => Phase;
 };
 
-// We will use this temporarily. 
+// We will use this temporarily.
 // Later, the logic will be built into the "goTo*" functions.
 export function getNarrationFromPhase(narrator: Narrator): string {
-  switch(this.type) {
+  switch (this.type) {
     case PhaseType.LOBBY: {
       return "Welcome to Mafia. Please wait for the rest of the players to join.";
-    } break;
+    }
     case PhaseType.INTRODUCTION: {
       return "default introduction";
-    } break;
+    }
     case PhaseType.NIGHT: {
       return "Please close your eyes.";
-    } break;
+    }
     case PhaseType.NARRATIONMORNING: {
       return "Somebody died!";
-    } break;
+    }
     case PhaseType.VOTING: {
       return "Somebody is going to die!";
-    } break;
+    }
     case PhaseType.NARRATIONLYNCHING: {
       return "Another person has died!";
-    } break;
+    }
     case PhaseType.CONCLUSION: {
       return "default conclusion";
-    } break;
+    }
     default: {
       return "";
-    } break;
+    }
   }
 }
 
@@ -121,26 +120,32 @@ function anyMafiaAlive(players: MapSchema<Player>): boolean {
 
 // Called during Conclusion phase, or if we encounter a game-breaking issue.
 export function goToLobby(players: MapSchema<Player>): Phase {
-  return {type: PhaseType.LOBBY,
+  return {
+    type: PhaseType.LOBBY,
     canMoveToNextPhase: roomOwnerConfirms,
     getNarration: getNarrationFromPhase,
-    getNextPhase: goToIntroduction};
+    getNextPhase: goToIntroduction,
+  };
 }
 
 // Called during Lobby phase to start the game.
 export function goToIntroduction(players: MapSchema<Player>): Phase {
-  return {type: PhaseType.INTRODUCTION,
+  return {
+    type: PhaseType.INTRODUCTION,
     canMoveToNextPhase: allConfirmed,
     getNarration: (narration: Narrator) => narration.getTheme(),
-    getNextPhase: goToNight};
+    getNextPhase: goToNight,
+  };
 }
 
 // Called during Introduction phase, or from conclusion phase (if Townspeople remain).
 export function goToNight(players: MapSchema<Player>): Phase {
-  return {type: PhaseType.NIGHT,
+  return {
+    type: PhaseType.NIGHT,
     canMoveToNextPhase: allConfirmed,
     getNarration: getNarrationFromPhase,
-    getNextPhase: goToMorning};
+    getNextPhase: goToMorning,
+  };
 }
 
 // Called during Night phase.
@@ -149,26 +154,32 @@ export function goToMorning(players: MapSchema<Player>): Phase {
     return goToConclusion(players);
   }
 
-  return {type: PhaseType.NARRATIONMORNING,
+  return {
+    type: PhaseType.NARRATIONMORNING,
     canMoveToNextPhase: allConfirmed,
     getNarration: getNarrationFromPhase,
-    getNextPhase: goToVoting};
+    getNextPhase: goToVoting,
+  };
 }
 
 // Called during Morning phase.
 export function goToVoting(players: MapSchema<Player>): Phase {
-  return {type: PhaseType.VOTING,
+  return {
+    type: PhaseType.VOTING,
     canMoveToNextPhase: allConfirmed,
     getNarration: getNarrationFromPhase,
-    getNextPhase: goToLynching};
+    getNextPhase: goToLynching,
+  };
 }
 
 // Called during Voting phase.
 export function goToLynching(players: MapSchema<Player>): Phase {
-  return {type: PhaseType.NARRATIONLYNCHING,
+  return {
+    type: PhaseType.NARRATIONLYNCHING,
     canMoveToNextPhase: allConfirmed,
     getNarration: getNarrationFromPhase,
-    getNextPhase: goToConclusion};
+    getNextPhase: goToConclusion,
+  };
 }
 
 // Called during Night phase or Lynching phase.
@@ -180,12 +191,15 @@ export function goToConclusion(players: MapSchema<Player>): Phase {
   let winner = "Congratulations Mafia, you have killed all players.";
 
   if (anyTownspersonAlive(players)) {
-    winner = "Congratulations Townspeople, you have rid the town of Mafia and lived.";
+    winner =
+      "Congratulations Townspeople, you have rid the town of Mafia and lived.";
   }
 
-  return {type: PhaseType.CONCLUSION,
+  return {
+    type: PhaseType.CONCLUSION,
     canMoveToNextPhase: roomOwnerConfirms,
-    getNarration: (narration: Narrator)=> winner,
+    getNarration: (narration: Narrator) => winner,
     // Stay on conclusion for now until we have a way to transition to new game.
-    getNextPhase: goToConclusion};
+    getNextPhase: goToConclusion,
+  };
 }
