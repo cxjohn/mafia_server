@@ -26,6 +26,10 @@ export class MafiaRoom extends Room<State> {
       );
     });
 
+    this.onMessage("kill", () => {
+      this.disconnect();
+    });
+
     this.onMessage("voteForLynch", (client, target) => {
       if (this.phase.type != PhaseType.VOTING) {
         console.log(
