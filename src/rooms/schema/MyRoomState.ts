@@ -44,13 +44,7 @@ export class State extends Schema {
     this.players.delete(sessionId);
   }
 
-  assignRoles() {
-    // Fill an array based on what roles are available.
-    // For now this is 1 mafia and the rest are townspeople.
-    let roles: Array<Role> = Array<Role>(this.players.size);
-    roles[0] = Role.MAFIA;
-    roles.fill(Role.TOWNSPERSON, 1, this.players.size);
-
+  assignRoles(roles: Array<Role>) {
     // Shuffle the array and assign a role to each person.
     shuffleArray(roles);
     this.players.forEach((player, id) => (player.role = roles.pop()));

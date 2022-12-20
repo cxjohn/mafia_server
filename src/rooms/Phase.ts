@@ -98,6 +98,17 @@ export function allVoted(players: MapSchema<Player>): boolean {
   return voted;
 }
 
+// Checks every Player, if all living Mafia voted, then returns true.
+export function allMafiaVoted(players: MapSchema<Player>): boolean {
+  let voted = true;
+
+  players.forEach((player, id) => {
+    voted &&= (player.voted || !player.alive) && player.role === Role.MAFIA;
+  });
+
+  return voted;
+}
+
 function anyTownspersonAlive(players: MapSchema<Player>): boolean {
   let any_townsperson = false;
 
