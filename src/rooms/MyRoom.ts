@@ -1,7 +1,7 @@
 import { Room, Client, Delayed } from "colyseus";
 import { Player, State, Role } from "./schema/MyRoomState";
 import { Narrator } from "../Narrator";
-import { PhaseType, Phase, goToLobby, allVoted } from "./Phase";
+import { PhaseType, Phase, goToLobby, allVoted, allMafiaVoted } from "./Phase";
 import { type } from "@colyseus/schema";
 
 export class MafiaRoom extends Room<State> {
@@ -10,6 +10,7 @@ export class MafiaRoom extends Room<State> {
   narrator: Narrator;
   phase: Phase;
   playerVotes: Map<Player, number>;
+  mafiaVotes: Map<Player, number>;
 
   onCreate(options) {
     console.log("MafiaRoom created!", options);
@@ -17,6 +18,7 @@ export class MafiaRoom extends Room<State> {
     this.narrator = new Narrator();
     this.phase = goToLobby(this.state.players);
     this.playerVotes = new Map<Player, number>();
+    this.mafiaVotes = new Map<Player, number>();
 
     //Messages
     this.onMessage("message", (client, message) => {
@@ -114,15 +116,58 @@ export class MafiaRoom extends Room<State> {
         return;
       }
 
-      console.log(
-        this.state.players[target]?.name + " has been whacked by the mafia"
-      );
-      this.state.players[target].alive = false;
+      if (!this.mafiaVotes.has(this.state.players[target])) {
+        this.mafiaVotes.set(this.state.players[target], 1);
+      } else {
+        this.mafiaVotes.set(
+          this.state.players[target],
+          this.mafiaVotes.get(this.state.players[target]) + 1
+        );
+      }
 
-      //TODO extract this into single function?
-      this.phase = this.phase.getNextPhase(this.state.players);
-      this.state.setNarration(this.phase.getNarration(this.narrator));
-      this.state.setPhase(this.phase.type);
+      this.state.players[client.sessionId].voted = true;
+
+
+      if (allMafiaVoted(this.state.players)) {
+
+        let highestVotes = 0;
+        let votedPlayer = new Player();
+        let tie = false;
+        let tiedPlayer = new Player();
+        this.mafiaVotes.forEach((votes, player) => {
+          if (votes == highestVotes) {
+            tie = true;
+            tiedPlayer = player;
+          }
+          if (votes > highestVotes) {
+            highestVotes = votes;
+            votedPlayer = player;
+            tie = false;
+          }
+        });
+
+        if (tie) {
+          console.log(
+            "It was a tie! But " + votedPlayer.name + " is still going to die."
+          );
+        }
+
+        console.log(votedPlayer.name + " has been murdered.");
+
+        //TODO extract this into single function?
+        this.phase = this.phase.getNextPhase(this.state.players);
+        this.state.setNarration(this.phase.getNarration(this.narrator));
+        this.state.setPhase(this.phase.type);
+
+        this.state.players.forEach((player, id) => {
+          player.voted = false;
+          if (player == votedPlayer) {
+            player.alive = false;
+          }
+        });
+
+        this.playerVotes.clear();
+      }
     });
 
     //Enter new phase
@@ -149,11 +194,6 @@ export class MafiaRoom extends Room<State> {
         this.phase = this.phase.getNextPhase(this.state.players);
         this.state.setNarration(this.phase.getNarration(this.narrator));
         this.state.setPhase(this.phase.type);
-
-        // Initialize roles when we first go to Introduction Phase.
-        if (this.phase.type === PhaseType.INTRODUCTION) {
-          this.state.assignRoles();
-        }
       }
       if (
         this.phase.type === PhaseType.NARRATIONMORNING &&
@@ -170,6 +210,10 @@ export class MafiaRoom extends Room<State> {
           }
         }, 1000);
       }
+    });
+
+    this.onMessage("setRoles", (client, roles) => {
+      this.state.assignRoles(roles);
     });
   }
 
