@@ -103,7 +103,7 @@ export function allMafiaVoted(players: MapSchema<Player>): boolean {
   let voted = true;
 
   players.forEach((player, id) => {
-    voted &&= (player.voted || !player.alive) && player.role === Role.MAFIA;
+    voted &&= player.voted || !player.alive || player.role !== Role.MAFIA;
   });
 
   return voted;

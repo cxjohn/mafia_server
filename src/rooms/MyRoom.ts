@@ -14,6 +14,7 @@ export class MafiaRoom extends Room<State> {
 
   onCreate(options) {
     console.log("MafiaRoom created!", options);
+    this.setPatchRate(20);
     this.setState(new State());
     this.narrator = new Narrator();
     this.phase = goToLobby(this.state.players);
@@ -127,9 +128,7 @@ export class MafiaRoom extends Room<State> {
 
       this.state.players[client.sessionId].voted = true;
 
-
       if (allMafiaVoted(this.state.players)) {
-
         let highestVotes = 0;
         let votedPlayer = new Player();
         let tie = false;
@@ -213,6 +212,7 @@ export class MafiaRoom extends Room<State> {
     });
 
     this.onMessage("setRoles", (client, roles) => {
+      console.log("roles", roles);
       this.state.assignRoles(roles);
     });
   }
