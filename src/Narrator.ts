@@ -1,4 +1,6 @@
 import seedRandom from "seed-random";
+import { Role } from "./rooms/schema/MyRoomState";
+
 
 const themes = [
   "Mafia",
@@ -20,6 +22,7 @@ export class Narrator {
   seed: string;
   theme: string;
   setting: [string, string];
+  last_killed: string;
 
   /*
    * This is called when we call "new Narrator()"
@@ -37,7 +40,7 @@ export class Narrator {
    * Initializes the theme and setting for the narration and returns an
    * introduction to the theme and setting
    */
-  public getTheme(): string {
+  public getSetting(): string {
     this.theme = themes[Math.floor(Math.random() * themes.length)];
     console.log("Theme is: ", this.theme);
     this.setting = settings[Math.floor(Math.random() * settings.length)];
@@ -52,5 +55,23 @@ export class Narrator {
       ". " +
       "You will need to do everything you can to survive."
     );
+  }
+
+  public getMorningNarration(): string {
+    return this.last_killed + " was killed during the night";
+  }
+
+  public getConclusion(winner: Role): string {
+    let congrats = "Congratulations Mafia, you have killed all players.";
+
+    if (winner === Role.TOWNSPERSON) {
+      congrats =
+        "Congratulations Townspeople, you have rid the town of Mafia and lived.";
+    }
+    return congrats;
+  }
+
+  public setLastKilled(player: string) {
+    this.last_killed = player;
   }
 }

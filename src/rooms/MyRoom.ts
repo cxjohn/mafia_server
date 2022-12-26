@@ -153,11 +153,6 @@ export class MafiaRoom extends Room<State> {
 
         console.log(votedPlayer.name + " has been murdered.");
 
-        //TODO extract this into single function?
-        this.phase = this.phase.getNextPhase(this.state.players);
-        this.state.setNarration(this.phase.getNarration(this.narrator));
-        this.state.setPhase(this.phase.type);
-
         this.state.players.forEach((player, id) => {
           player.voted = false;
           if (player == votedPlayer) {
@@ -165,7 +160,25 @@ export class MafiaRoom extends Room<State> {
           }
         });
 
-        this.playerVotes.clear();
+        this.mafiaVotes.clear();
+
+        //TODO extract this into single function?
+        this.phase = this.phase.getNextPhase(this.state.players);
+        this.state.setNarration(this.phase.getNarration(this.narrator));
+        this.state.setPhase(this.phase.type);
+
+        this.state.countdown = 240;
+        this.countdownInterval = this.clock.setInterval(() => {
+          this.state.countdown--;
+          this.state.phase !== PhaseType.NARRATIONMORNING &&
+            this.countdownInterval.clear();
+          if (this.state.countdown === 0) {
+            this.countdownInterval.clear();
+            this.phase = this.phase.getNextPhase(this.state.players);
+            this.state.setNarration(this.phase.getNarration(this.narrator));
+            this.state.setPhase(this.phase.type);
+          }
+        }, 1000);
       }
     });
 
@@ -193,21 +206,6 @@ export class MafiaRoom extends Room<State> {
         this.phase = this.phase.getNextPhase(this.state.players);
         this.state.setNarration(this.phase.getNarration(this.narrator));
         this.state.setPhase(this.phase.type);
-      }
-      if (
-        this.phase.type === PhaseType.NARRATIONMORNING &&
-        confirmed.length === 0
-      ) {
-        this.state.countdown = 240;
-        this.countdownInterval = this.clock.setInterval(() => {
-          this.state.countdown--;
-          this.state.phase !== PhaseType.NARRATIONMORNING &&
-            this.countdownInterval.clear();
-          if (this.state.countdown === 0) {
-            this.countdownInterval.clear();
-            this.phase = this.phase.getNextPhase(this.state.players);
-          }
-        }, 1000);
       }
     });
 

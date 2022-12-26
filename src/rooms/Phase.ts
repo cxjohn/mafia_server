@@ -144,7 +144,7 @@ export function goToIntroduction(players: MapSchema<Player>): Phase {
   return {
     type: PhaseType.INTRODUCTION,
     canMoveToNextPhase: allConfirmed,
-    getNarration: (narration: Narrator) => narration.getTheme(),
+    getNarration: (narration: Narrator) => narration.getSetting(),
     getNextPhase: goToNight,
   };
 }
@@ -199,17 +199,16 @@ export function goToConclusion(players: MapSchema<Player>): Phase {
     return goToNight(players);
   }
 
-  let winner = "Congratulations Mafia, you have killed all players.";
+  let winner = Role.MAFIA;
 
   if (anyTownspersonAlive(players)) {
-    winner =
-      "Congratulations Townspeople, you have rid the town of Mafia and lived.";
+    winner = Role.TOWNSPERSON;
   }
 
   return {
     type: PhaseType.CONCLUSION,
     canMoveToNextPhase: roomOwnerConfirms,
-    getNarration: (narration: Narrator) => winner,
+    getNarration: (narration: Narrator) => narration.getConclusion(winner),
     // Stay on conclusion for now until we have a way to transition to new game.
     getNextPhase: goToConclusion,
   };
