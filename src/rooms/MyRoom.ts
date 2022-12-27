@@ -11,6 +11,13 @@ export class MafiaRoom extends Room<State> {
   phase: Phase;
   playerVotes: Map<Player, number>;
   mafiaVotes: Map<Player, number>;
+  mafiaFinished: boolean;
+  detectiveFinished: boolean;
+  angelFinished: boolean;
+  hasMafia: boolean; // Should always be true;
+  hasDetective: boolean;
+  hasAngel: boolean;
+  savedPlayer: Player;
 
   onCreate(options) {
     console.log("MafiaRoom created!", options);
@@ -20,6 +27,13 @@ export class MafiaRoom extends Room<State> {
     this.phase = goToLobby(this.state.players);
     this.playerVotes = new Map<Player, number>();
     this.mafiaVotes = new Map<Player, number>();
+    this.mafiaFinished = false;
+    this.angelFinished = false;
+    this.detectiveFinished = false;
+    this.hasMafia = false;
+    this.hasDetective = false;
+    this.hasAngel = false;
+    this.savedPlayer = new Player();
 
     //Messages
     this.onMessage("message", (client, message) => {
@@ -129,57 +143,41 @@ export class MafiaRoom extends Room<State> {
       this.state.players[client.sessionId].voted = true;
 
       if (allMafiaVoted(this.state.players)) {
-        let highestVotes = 0;
-        let votedPlayer = new Player();
-        let tie = false;
-        let tiedPlayer = new Player();
-        this.mafiaVotes.forEach((votes, player) => {
-          if (votes == highestVotes) {
-            tie = true;
-            tiedPlayer = player;
-          }
-          if (votes > highestVotes) {
-            highestVotes = votes;
-            votedPlayer = player;
-            tie = false;
-          }
-        });
-
-        if (tie) {
-          console.log(
-            "It was a tie! But " + votedPlayer.name + " is still going to die."
-          );
-        }
-
-        console.log(votedPlayer.name + " has been murdered.");
-
-        this.state.players.forEach((player, id) => {
-          player.voted = false;
-          if (player == votedPlayer) {
-            player.alive = false;
-          }
-        });
-
-        this.mafiaVotes.clear();
-
-        //TODO extract this into single function?
-        this.phase = this.phase.getNextPhase(this.state.players);
-        this.state.setNarration(this.phase.getNarration(this.narrator));
-        this.state.setPhase(this.phase.type);
-
-        this.state.countdown = 240;
-        this.countdownInterval = this.clock.setInterval(() => {
-          this.state.countdown--;
-          this.state.phase !== PhaseType.NARRATIONMORNING &&
-            this.countdownInterval.clear();
-          if (this.state.countdown === 0) {
-            this.countdownInterval.clear();
-            this.phase = this.phase.getNextPhase(this.state.players);
-            this.state.setNarration(this.phase.getNarration(this.narrator));
-            this.state.setPhase(this.phase.type);
-          }
-        }, 1000);
+        this.mafiaFinished = true;
+        this.resolveNight();
       }
+    });
+
+    this.onMessage("selectSaved", (client, target) => {
+      if (this.state.players[client.sessionId]?.role != Role.ANGEL) {
+        console.log(
+          "Client error, selectSaved can only be called from a client who has the ANGEL role"
+        );
+        return;
+      }
+
+      if (!this.state.players[target]?.alive) {
+        console.log(
+          "Client error, only living players can be saved by the angel"
+        );
+        return;
+      }
+
+      this.savedPlayer = this.state.players[target];
+      this.angelFinished = true;
+      this.resolveNight();
+
+    });
+
+    this.onMessage("detectiveFinished", (client) => {
+      if (this.state.players[client.sessionId]?.role != Role.DETECTIVE) {
+        console.log(
+          "Client error, detectiveFinished can only be called from a client who has the DETECTIVE role"
+        );
+        return;
+      }
+      this.detectiveFinished = true;
+      this.resolveNight();
     });
 
     //Enter new phase
@@ -209,11 +207,89 @@ export class MafiaRoom extends Room<State> {
       }
     });
 
-    this.onMessage("setRoles", (client, roles) => {
-      console.log("roles", roles);
+    this.onMessage("setRoles", (client, roles: Array<Role>) => {
+      roles.forEach(element => {
+        if (element === Role.MAFIA) { this.hasMafia = true; }
+        else if (element === Role.ANGEL) { this.hasAngel = true; }
+        else if (element === Role.DETECTIVE) { this.hasDetective = true; }
+      });
+
+      if (!this.hasMafia) {
+        console.log("Role array sent to backend but it contains no mafia.");
+      }
+
       this.state.assignRoles(roles);
     });
   }
+
+  resolveNight() {
+    if ((this.hasMafia && !this.mafiaFinished) ||
+        (this.hasAngel && !this.angelFinished) ||
+        (this.hasDetective && !this.detectiveFinished)) {
+          return;
+        }
+
+    this.mafiaFinished = false;
+    this.angelFinished = false;
+    this.detectiveFinished = false;
+
+    // Detectives and Angels will be resolved by now.
+    let highestVotes = 0;
+    let votedPlayer = new Player();
+    let tie = false;
+    let tiedPlayer = new Player();
+    this.mafiaVotes.forEach((votes, player) => {
+      if (votes == highestVotes) {
+        tie = true;
+        tiedPlayer = player;
+      }
+      if (votes > highestVotes) {
+        highestVotes = votes;
+        votedPlayer = player;
+        tie = false;
+      }
+    });
+
+    if (tie) {
+      console.log(
+        "It was a tie! But " + votedPlayer.name + " is still going to die."
+      );
+    }
+
+    if (votedPlayer === this.savedPlayer) {
+      votedPlayer = new Player();
+    } else {
+      console.log(votedPlayer.name + " has been murdered.");
+    }
+
+    this.state.players.forEach((player, id) => {
+      player.voted = false;
+      if (player == votedPlayer) {
+        player.alive = false;
+      }
+    });
+
+    this.mafiaVotes.clear();
+
+    //TODO extract this into single function?
+    this.phase = this.phase.getNextPhase(this.state.players);
+    this.state.setNarration(this.phase.getNarration(this.narrator));
+    this.state.setPhase(this.phase.type);
+
+    this.state.countdown = 240;
+    this.countdownInterval = this.clock.setInterval(() => {
+      this.state.countdown--;
+      this.state.phase !== PhaseType.NARRATIONMORNING &&
+        this.countdownInterval.clear();
+      if (this.state.countdown === 0) {
+        this.countdownInterval.clear();
+        this.phase = this.phase.getNextPhase(this.state.players);
+        this.state.setNarration(this.phase.getNarration(this.narrator));
+        this.state.setPhase(this.phase.type);
+      }
+    }, 1000);
+  }
+
 
   onJoin(client: Client, options) {
     this.state.createPlayer(client.sessionId, options);
