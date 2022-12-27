@@ -4,6 +4,8 @@ import { PhaseType, Phase } from "../Phase";
 export enum Role {
   MAFIA = 0,
   TOWNSPERSON = 1,
+  ANGEL = 2,
+  DETECTIVE = 3,
 }
 
 export class Player extends Schema {
