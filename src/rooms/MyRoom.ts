@@ -102,6 +102,8 @@ export class MafiaRoom extends Room<State> {
           player.voted = false;
           if (player == votedPlayer) {
             player.alive = false;
+            if (player.role === Role.DETECTIVE) this.detectiveFinished = true;
+            if (player.role === Role.ANGEL) this.angelFinished = true;
           }
         });
 
@@ -266,6 +268,8 @@ export class MafiaRoom extends Room<State> {
       player.voted = false;
       if (player == votedPlayer) {
         player.alive = false;
+        if (player.role === Role.DETECTIVE) this.detectiveFinished = true;
+        if (player.role === Role.ANGEL) this.angelFinished = true;
       }
     });
 
