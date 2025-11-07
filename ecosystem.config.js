@@ -23,7 +23,7 @@ module.exports = {
       repo: "git@github.com:cxjohn/mafia_server.git",
       path: "/home/deploy",
       "post-deploy":
-        "npm install && npm run build && npm exec colyseus-post-deploy",
+        "npm install && npm run build && pm2 startOrRestart ecosystem.config.js --env production",
     },
   },
 };
