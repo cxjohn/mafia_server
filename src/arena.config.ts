@@ -25,7 +25,16 @@ export default Arena({
      * Bind your custom express routes here:
      */
 
-    app.use(cors());
+    app.use(
+      cors({
+        origin:
+          process.env.NODE_ENV === "production"
+            ? "https://mafia-client.vercel.app"
+            : true,
+        credentials: true,
+      })
+    );
+    
     app.get("/", (req, res) => {
       res.send("It's time to kick ass and chew bubblegum!");
     });
