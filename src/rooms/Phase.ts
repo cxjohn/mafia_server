@@ -109,14 +109,14 @@ export function allMafiaVoted(players: MapSchema<Player>): boolean {
   return voted;
 }
 
-function anyTownspersonAlive(players: MapSchema<Player>): boolean {
-  let any_townsperson = false;
+function anyNonMafiaAlive(players: MapSchema<Player>): boolean {
+  let any_non_mafia = false;
 
   players.forEach((player, id) => {
-    any_townsperson ||= player.role === Role.TOWNSPERSON && player.alive;
+    any_non_mafia ||= player.role !== Role.MAFIA && player.alive;
   });
 
-  return any_townsperson;
+  return any_non_mafia;
 }
 
 function anyMafiaAlive(players: MapSchema<Player>): boolean {
@@ -161,7 +161,7 @@ export function goToNight(players: MapSchema<Player>): Phase {
 
 // Called during Night phase.
 export function goToMorning(players: MapSchema<Player>): Phase {
-  if (!anyTownspersonAlive(players)) {
+  if (!anyNonMafiaAlive(players)) {
     return goToConclusion(players);
   }
 
@@ -195,13 +195,13 @@ export function goToLynching(players: MapSchema<Player>): Phase {
 
 // Called during Night phase or Lynching phase.
 export function goToConclusion(players: MapSchema<Player>): Phase {
-  if (anyTownspersonAlive(players) && anyMafiaAlive(players)) {
+  if (anyNonMafiaAlive(players) && anyMafiaAlive(players)) {
     return goToNight(players);
   }
 
   let winner = Role.MAFIA;
 
-  if (anyTownspersonAlive(players)) {
+  if (anyNonMafiaAlive(players)) {
     winner = Role.TOWNSPERSON;
   }
 
