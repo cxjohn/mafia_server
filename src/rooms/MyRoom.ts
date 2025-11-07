@@ -318,11 +318,18 @@ export class MafiaRoom extends Room<State> {
       this.state.players.get(client.sessionId).connected = true;
     } catch (e) {
       // 180 seconds expired. let's remove the client.
+      const playerName = this.state.players.get(client.sessionId)?.name;
       this.state.removePlayer(client.sessionId);
       this.broadcast(
         "messages",
-        `${this.state.players[client.sessionId]?.name} left.`
+        `${playerName} left.`
       );
+      
+      // Auto-dispose room when empty
+      if (this.state.players.size === 0) {
+        console.log("Room is empty, disposing...");
+        this.disconnect();
+      }
     }
   }
 
