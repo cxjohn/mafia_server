@@ -85,7 +85,22 @@ export class MafiaRoom extends Room<State> {
           }
         });
 
-        if (tie) {
+         if (tie) {
+          const alivePlayers = Array.from(this.state.players.values()).filter(p => p.alive);
+          if (alivePlayers.length <= 2) {
+            console.log(
+              "Tie with 2 players remaining. Skipping lynch, proceeding to night.",
+            );
+
+            this.phase = this.phase.getNextPhase(this.state.players);
+            this.state.setNarration(this.phase.getNarration(this.narrator));
+            this.state.setPhase(this.phase.type);
+
+            this.state.players.forEach((player) => (player.voted = false));
+
+            this.playerVotes.clear();
+            return;
+          }
           console.log(
             "It was a tie! But " + votedPlayer.name + " is still going to die."
           );
