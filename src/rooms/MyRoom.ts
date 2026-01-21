@@ -39,7 +39,7 @@ export class MafiaRoom extends Room<State> {
     this.onMessage("message", (client, message) => {
       this.broadcast(
         "messages",
-        `(${this.state.players[client.sessionId]?.name}) ${message}`
+        `(${this.state.players[client.sessionId]?.name}) ${message}`,
       );
     });
 
@@ -50,7 +50,7 @@ export class MafiaRoom extends Room<State> {
     this.onMessage("voteForLynch", (client, target) => {
       if (this.phase.type != PhaseType.VOTING) {
         console.log(
-          "Client error, voteForLynch can only be called during VOTING phase"
+          "Client error, voteForLynch can only be called during VOTING phase",
         );
         return;
       }
@@ -60,7 +60,7 @@ export class MafiaRoom extends Room<State> {
       } else {
         this.playerVotes.set(
           this.state.players[target],
-          this.playerVotes.get(this.state.players[target]) + 1
+          this.playerVotes.get(this.state.players[target]) + 1,
         );
       }
 
@@ -85,8 +85,10 @@ export class MafiaRoom extends Room<State> {
           }
         });
 
-         if (tie) {
-          const alivePlayers = Array.from(this.state.players.values()).filter(p => p.alive);
+        if (tie) {
+          const alivePlayers = Array.from(this.state.players.values()).filter(
+            (p) => p.alive,
+          );
           if (alivePlayers.length <= 2) {
             console.log(
               "Tie with 2 players remaining. Skipping lynch, proceeding to night.",
@@ -102,7 +104,7 @@ export class MafiaRoom extends Room<State> {
             return;
           }
           console.log(
-            "It was a tie! But " + votedPlayer.name + " is still going to die."
+            "It was a tie! But " + votedPlayer.name + " is still going to die.",
           );
         }
 
@@ -117,8 +119,6 @@ export class MafiaRoom extends Room<State> {
           player.voted = false;
           if (player == votedPlayer) {
             player.alive = false;
-            if (player.role === Role.DETECTIVE) this.detectiveFinished = true;
-            if (player.role === Role.ANGEL) this.angelFinished = true;
           }
         });
 
@@ -129,21 +129,21 @@ export class MafiaRoom extends Room<State> {
     this.onMessage("voteForWhack", (client, target) => {
       if (this.phase.type != PhaseType.NIGHT) {
         console.log(
-          "Client error, voteForWhack can only be called during NIGHT phase"
+          "Client error, voteForWhack can only be called during NIGHT phase",
         );
         return;
       }
 
       if (this.state.players[client.sessionId]?.role != Role.MAFIA) {
         console.log(
-          "Client error, voteForWhack can only be called from a client who has the MAFIA role"
+          "Client error, voteForWhack can only be called from a client who has the MAFIA role",
         );
         return;
       }
 
       if (this.state.players[target]?.role == Role.MAFIA) {
         console.log(
-          "Client error, voteForWhack can not target a user who has the MAFIA role"
+          "Client error, voteForWhack can not target a user who has the MAFIA role",
         );
         return;
       }
@@ -153,7 +153,7 @@ export class MafiaRoom extends Room<State> {
       } else {
         this.mafiaVotes.set(
           this.state.players[target],
-          this.mafiaVotes.get(this.state.players[target]) + 1
+          this.mafiaVotes.get(this.state.players[target]) + 1,
         );
       }
 
@@ -168,14 +168,14 @@ export class MafiaRoom extends Room<State> {
     this.onMessage("selectSaved", (client, target) => {
       if (this.state.players[client.sessionId]?.role != Role.ANGEL) {
         console.log(
-          "Client error, selectSaved can only be called from a client who has the ANGEL role"
+          "Client error, selectSaved can only be called from a client who has the ANGEL role",
         );
         return;
       }
 
       if (!this.state.players[target]?.alive) {
         console.log(
-          "Client error, only living players can be saved by the angel"
+          "Client error, only living players can be saved by the angel",
         );
         return;
       }
@@ -183,13 +183,12 @@ export class MafiaRoom extends Room<State> {
       this.savedPlayer = this.state.players[target];
       this.angelFinished = true;
       this.resolveNight();
-
     });
 
     this.onMessage("detectiveFinished", (client) => {
       if (this.state.players[client.sessionId]?.role != Role.DETECTIVE) {
         console.log(
-          "Client error, detectiveFinished can only be called from a client who has the DETECTIVE role"
+          "Client error, detectiveFinished can only be called from a client who has the DETECTIVE role",
         );
         return;
       }
@@ -202,7 +201,7 @@ export class MafiaRoom extends Room<State> {
     this.onMessage("nextPhase", (client) => {
       if (!this.state.players.has(client.sessionId)) {
         console.log(
-          "Client error, requesting nextPhase from client who does not exist"
+          "Client error, requesting nextPhase from client who does not exist",
         );
       }
       if (!this.state.players[client.sessionId].alive) {
@@ -225,10 +224,14 @@ export class MafiaRoom extends Room<State> {
     });
 
     this.onMessage("setRoles", (client, roles: Array<Role>) => {
-      roles.forEach(element => {
-        if (element === Role.MAFIA) { this.hasMafia = true; }
-        else if (element === Role.ANGEL) { this.hasAngel = true; }
-        else if (element === Role.DETECTIVE) { this.hasDetective = true; }
+      roles.forEach((element) => {
+        if (element === Role.MAFIA) {
+          this.hasMafia = true;
+        } else if (element === Role.ANGEL) {
+          this.hasAngel = true;
+        } else if (element === Role.DETECTIVE) {
+          this.hasDetective = true;
+        }
       });
 
       if (!this.hasMafia) {
@@ -240,11 +243,24 @@ export class MafiaRoom extends Room<State> {
   }
 
   resolveNight() {
-    if ((this.hasMafia && !this.mafiaFinished) ||
-        (this.hasAngel && !this.angelFinished) ||
-        (this.hasDetective && !this.detectiveFinished)) {
-          return;
-        }
+    const angelAlive =
+      this.hasAngel &&
+      Array.from(this.state.players.values()).some(
+        (p) => p.role === Role.ANGEL && p.alive,
+      );
+    const detectiveAlive =
+      this.hasDetective &&
+      Array.from(this.state.players.values()).some(
+        (p) => p.role === Role.DETECTIVE && p.alive,
+      );
+
+    if (
+      (this.hasMafia && !this.mafiaFinished) ||
+      (angelAlive && !this.angelFinished) ||
+      (detectiveAlive && !this.detectiveFinished)
+    ) {
+      return;
+    }
 
     this.mafiaFinished = false;
     this.angelFinished = false;
@@ -269,7 +285,7 @@ export class MafiaRoom extends Room<State> {
 
     if (tie) {
       console.log(
-        "It was a tie! But " + votedPlayer.name + " is still going to die."
+        "It was a tie! But " + votedPlayer.name + " is still going to die.",
       );
     }
 
@@ -283,8 +299,6 @@ export class MafiaRoom extends Room<State> {
       player.voted = false;
       if (player == votedPlayer) {
         player.alive = false;
-        if (player.role === Role.DETECTIVE) this.detectiveFinished = true;
-        if (player.role === Role.ANGEL) this.angelFinished = true;
       }
     });
 
@@ -309,7 +323,6 @@ export class MafiaRoom extends Room<State> {
     }, 1000);
   }
 
-
   onJoin(client: Client, options) {
     this.state.createPlayer(client.sessionId, options);
     if (this.state.players.size === 1) {
@@ -317,7 +330,7 @@ export class MafiaRoom extends Room<State> {
     }
     this.broadcast(
       "messages",
-      `${this.state.players[client.sessionId]?.name} joined.`
+      `${this.state.players[client.sessionId]?.name} joined.`,
     );
   }
 
@@ -335,11 +348,8 @@ export class MafiaRoom extends Room<State> {
       // 180 seconds expired. let's remove the client.
       const playerName = this.state.players.get(client.sessionId)?.name;
       this.state.removePlayer(client.sessionId);
-      this.broadcast(
-        "messages",
-        `${playerName} left.`
-      );
-      
+      this.broadcast("messages", `${playerName} left.`);
+
       // Auto-dispose room when empty
       if (this.state.players.size === 0) {
         console.log("Room is empty, disposing...");
